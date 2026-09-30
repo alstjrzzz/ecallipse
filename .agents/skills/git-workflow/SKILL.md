@@ -10,9 +10,24 @@ description: Ecallipse 저장소에서 코드 변경 작업을 시작하거나 �
 ## 커밋 메시지
 
 - 한글로 쓴다. install, redis, WebSocket 같은 개발 용어는 억지로 번역하지 않는다.
-- `feat:`, `fix:`, `refactor:`, `test:`, `docs:`, `chore:` prefix에 짧은 제목 한 줄만 쓴다. 본문은 쓰지 않는다.
+- `feat:`, `fix:`, `refactor:`, `perf:`, `test:`, `docs:`, `chore:`, `revert:` prefix에 짧은 제목 한 줄만 쓴다. 본문은 쓰지 않는다.
 - `Co-Authored-By` 같은 AI 작성자 표시는 절대 붙이지 않는다.
-- 예: `feat: 수신 통화 무응답 timeout 처리`
+- 제목은 어디가 어떻게 바뀌었는지 드러나게 짧게 쓴다. 아래는 사용자가 고른 예시다. 규칙이 아니라 톤 참고용이고, 상황에 안 맞으면 자연스럽게 벗어나도 된다.
+  - 경향: 명사로 끝맺음. 이유는 보통 생략(`revert`는 이유를 씀). `fix`는 사용자가 겪는 증상 위주이고, 원인이 분명하면 기술 용어로 원인을 짚기도 함. 클래스명 같은 구현 세부는 필요할 때만.
+  - `feat: 통화 transcript를 바탕으로 Gemini가 Next Action 제안`
+  - `feat: 통화 결과 화면에 transcript 표시`
+  - `feat: 무응답 통화 30초 후 자동 종료`
+  - `fix: 브라우저 통화에서 상대 음성이 들리지 않는 문제 수정`
+  - `fix: 새로고침 시 통화가 종료되는 문제 수정`
+  - `fix: stale SIP registration으로 INVITE가 전달되지 않는 문제 수정`
+  - `refactor: Next Action 모델을 Claude에서 Gemini로 교체`
+  - `refactor: NextAction을 Suggestion으로 이름 변경`
+  - `perf: 통화별 Next Action 생성을 단일 실행으로 제한`
+  - `test: 음성이 transcript와 Next Action까지 이어지는지 확인하는 테스트 추가`
+  - `docs: README 로컬 실행 방법 갱신`
+  - `chore: Postgres 비밀번호를 .env로 분리`
+  - `chore: Vite 개발 서버에 HTTPS 적용` / `chore: FreeSWITCH SIP 연결을 WSS로 전환` (대상이 둘이면 나눠서 커밋)
+  - `revert: 인식 속도가 느려져 Deepgram 모델을 nova-2로 되돌림`
 
 ## 작업 branch
 
