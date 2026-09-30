@@ -30,4 +30,4 @@ npm.cmd run lint; npm.cmd test; npm.cmd run build
 
 ## Git
 
-Git 작업은 `.agents/skills/git-workflow/SKILL.md`를 따른다.
+코드를 바꾸는 작업과 Git 작업은 시작할 때부터 git-workflow 스킬(`.agents/skills/git-workflow/SKILL.md`)을 따른다.
