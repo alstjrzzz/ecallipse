@@ -65,8 +65,7 @@ class CallFlowIntegrationTests {
                                 }
                                 """))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.segment.finalSegment").value(true))
-                .andExpect(jsonPath("$.nextAction.text").value("확인할 다음 행동: 내일까지 견적서를 회신하기"));
+                .andExpect(jsonPath("$.segment.finalSegment").value(true));
 
         mvc.perform(get("/api/calls/{callId}/transcript", callId))
                 .andExpect(status().isOk())

@@ -1,6 +1,9 @@
 package com.alstjrzzz.ecallipse.call;
 
 import com.alstjrzzz.ecallipse.realtime.CallEventPublisher;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.time.Clock;
@@ -11,25 +14,44 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Executor;
+import java.util.concurrent.Executors;
 
 @Service
 public class TranscriptApplicationService {
+    private static final Logger log = LoggerFactory.getLogger(TranscriptApplicationService.class);
+
     private final Map<UUID, Map<String, TranscriptSegment>> segmentsByCall = new ConcurrentHashMap<>();
+    private final Map<UUID, AssistanceState> assistanceByCall = new ConcurrentHashMap<>();
     private final CallApplicationService calls;
     private final CallEventPublisher events;
     private final NextActionGenerator nextActions;
     private final Clock clock;
+    private final Executor assistanceExecutor;
 
+    @Autowired
     public TranscriptApplicationService(
             CallApplicationService calls,
             CallEventPublisher events,
             NextActionGenerator nextActions,
             Clock clock
     ) {
+        // LLM calls take seconds, so they run off the request and lock path.
+        this(calls, events, nextActions, clock, Executors.newVirtualThreadPerTaskExecutor());
+    }
+
+    TranscriptApplicationService(
+            CallApplicationService calls,
+            CallEventPublisher events,
+            NextActionGenerator nextActions,
+            Clock clock,
+            Executor assistanceExecutor
+    ) {
         this.calls = calls;
         this.events = events;
         this.nextActions = nextActions;
         this.clock = clock;
+        this.assistanceExecutor = assistanceExecutor;
     }
 
     public TranscriptResult submit(UUID callId, TranscriptInput input) {
@@ -62,7 +84,7 @@ public class TranscriptApplicationService {
             validateSequenceOwner(callSegments, input);
 
             if (existing != null && sameContent(existing, input)) {
-                return new TranscriptResult(existing, null, true);
+                return new TranscriptResult(existing, true);
             }
 
             TranscriptSegment segment = new TranscriptSegment(
@@ -78,13 +100,56 @@ public class TranscriptApplicationService {
             callSegments.put(segment.segmentId(), segment);
 
             events.publish(callId, "transcript.updated", segment);
-            NextAction nextAction = null;
             if (segment.finalSegment()) {
-                nextAction = nextActions.generate(segment);
-                events.publish(callId, "assistance.next-action", nextAction);
+                requestNextAction(callId, segment);
             }
-            return new TranscriptResult(segment, nextAction, false);
+            return new TranscriptResult(segment, false);
         }
+    }
+
+    /**
+     * At most one generation runs per call. A final segment that arrives meanwhile is queued, and a result
+     * that was overtaken by a newer final segment is dropped instead of published.
+     */
+    private void requestNextAction(UUID callId, TranscriptSegment source) {
+        AssistanceState state = assistanceByCall.computeIfAbsent(callId, ignored -> new AssistanceState());
+        synchronized (state) {
+            state.latestSource = source;
+            if (state.running) return;
+            state.running = true;
+        }
+        assistanceExecutor.execute(() -> generateNextActions(callId, state));
+    }
+
+    private void generateNextActions(UUID callId, AssistanceState state) {
+        while (true) {
+            TranscriptSegment source;
+            synchronized (state) {
+                source = state.latestSource;
+                state.latestSource = null;
+                if (source == null) {
+                    state.running = false;
+                    return;
+                }
+            }
+            try {
+                NextAction nextAction = nextActions.generate(source, list(callId));
+                boolean overtaken;
+                synchronized (state) {
+                    overtaken = state.latestSource != null;
+                }
+                if (nextAction != null && !overtaken) {
+                    events.publish(callId, "assistance.next-action", nextAction);
+                }
+            } catch (RuntimeException exception) {
+                log.warn("Next Action generation failed for call {}: {}", callId, exception.getMessage());
+            }
+        }
+    }
+
+    private static final class AssistanceState {
+        private boolean running;
+        private TranscriptSegment latestSource;
     }
 
     public List<TranscriptSegment> list(UUID callId) {
@@ -148,7 +213,7 @@ public class TranscriptApplicationService {
     ) {
     }
 
-    public record TranscriptResult(TranscriptSegment segment, NextAction nextAction, boolean duplicate) {
+    public record TranscriptResult(TranscriptSegment segment, boolean duplicate) {
     }
 
     public static class InvalidTranscriptException extends RuntimeException {

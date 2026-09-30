@@ -26,11 +26,13 @@ class TranscriptApplicationServiceTest {
             (call, onAnswered) -> { },
             clock
     );
+    private final List<Runnable> queuedAssistance = new ArrayList<>();
     private final TranscriptApplicationService transcripts = new TranscriptApplicationService(
             calls,
             events,
             new DeterministicNextActionGenerator(clock),
-            clock
+            clock,
+            queuedAssistance::add
     );
 
     private UUID callId;
@@ -53,7 +55,10 @@ class TranscriptApplicationServiceTest {
         assertThat(transcripts.list(callId))
                 .extracting(TranscriptSegment::segmentId)
                 .containsExactly("first", "second");
-        assertThat(result.nextAction().text()).isEqualTo("확인할 다음 행동: 내일까지 견적서를 회신하기");
+        runQueuedAssistance();
+        assertThat(result.segment().segmentId()).isEqualTo("first");
+        assertThat(((NextAction) events.lastPayload("assistance.next-action")).text())
+                .isEqualTo("확인할 다음 행동: 내일까지 견적서를 회신하기");
         assertThat(events.types()).containsExactly(
                 "transcript.updated",
                 "transcript.updated",
@@ -65,12 +70,13 @@ class TranscriptApplicationServiceTest {
     void treatsAnIdenticalRevisionAsIdempotent() {
         TranscriptApplicationService.TranscriptInput input = input("one", 1, 0, true, "다시 연락하기");
         transcripts.submit(callId, input);
+        runQueuedAssistance();
         events.clear();
 
         TranscriptApplicationService.TranscriptResult duplicate = transcripts.submit(callId, input);
 
         assertThat(duplicate.duplicate()).isTrue();
-        assertThat(duplicate.nextAction()).isNull();
+        runQueuedAssistance();
         assertThat(events.types()).isEmpty();
     }
 
@@ -108,10 +114,29 @@ class TranscriptApplicationServiceTest {
 
         assertThat(result.segment().sequence()).isZero();
         assertThat(result.segment().revision()).isEqualTo(1);
-        assertThat(result.nextAction()).isNotNull();
+        runQueuedAssistance();
+        assertThat(events.types()).contains("assistance.next-action");
         assertThat(transcripts.list(callId))
                 .extracting(TranscriptSegment::segmentId, TranscriptSegment::sequence)
                 .containsExactly(org.assertj.core.groups.Tuple.tuple("a-0", 0L), org.assertj.core.groups.Tuple.tuple("b-0", 1L));
+    }
+
+    @Test
+    void finalsArrivingDuringGenerationCollapseIntoOneActionForTheLatest() {
+        transcripts.submit(callId, input("one", 1, 0, true, "견적서 보내기"));
+        transcripts.submit(callId, input("two", 2, 0, true, "화요일에 다시 통화하기"));
+
+        assertThat(queuedAssistance).hasSize(1);
+        runQueuedAssistance();
+
+        assertThat(events.types()).filteredOn("assistance.next-action"::equals).hasSize(1);
+        assertThat(((NextAction) events.lastPayload("assistance.next-action")).sourceSegmentId()).isEqualTo("two");
+    }
+
+    private void runQueuedAssistance() {
+        List<Runnable> tasks = List.copyOf(queuedAssistance);
+        queuedAssistance.clear();
+        tasks.forEach(Runnable::run);
     }
 
     private TranscriptApplicationService.TranscriptInput input(
@@ -133,23 +158,31 @@ class TranscriptApplicationServiceTest {
 
     private static final class RecordingEvents implements CallEventPublisher, UserEventPublisher {
         private final List<String> types = new ArrayList<>();
+        private final List<Object> payloads = new ArrayList<>();
 
         @Override
         public void publish(UUID callId, String type, Object payload) {
             types.add(type);
+            payloads.add(payload);
         }
 
         @Override
         public void publishToUser(String userId, UUID callId, String type, Object payload) {
             types.add(type);
+            payloads.add(payload);
         }
 
         List<String> types() {
             return List.copyOf(types);
         }
 
+        Object lastPayload(String type) {
+            return payloads.get(types.lastIndexOf(type));
+        }
+
         void clear() {
             types.clear();
+            payloads.clear();
         }
     }
 }

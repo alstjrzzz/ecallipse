@@ -1,11 +1,10 @@
 package com.alstjrzzz.ecallipse.call;
 
-import org.springframework.stereotype.Component;
-
 import java.time.Clock;
 import java.time.Instant;
+import java.util.List;
 
-@Component
+/** Used when no LLM key is configured: echoes the finalized sentence as the action. */
 public class DeterministicNextActionGenerator implements NextActionGenerator {
     private static final int MAX_SOURCE_LENGTH = 120;
 
@@ -16,7 +15,7 @@ public class DeterministicNextActionGenerator implements NextActionGenerator {
     }
 
     @Override
-    public NextAction generate(TranscriptSegment segment) {
+    public NextAction generate(TranscriptSegment segment, List<TranscriptSegment> transcript) {
         String normalized = segment.text().trim().replaceAll("\\s+", " ");
         String source = normalized.length() <= MAX_SOURCE_LENGTH
                 ? normalized
