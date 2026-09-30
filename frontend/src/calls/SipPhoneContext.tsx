@@ -19,6 +19,8 @@ type SipPhoneContextValue = {
   error: string | null;
   incomingCaller: string | null;
   muted: boolean;
+  /** Microphone stream of the established call, the same track the call sends. */
+  localStream: MediaStream | null;
   call: (extension: string) => Promise<void>;
   answer: () => Promise<void>;
   hangup: () => Promise<void>;
@@ -34,6 +36,7 @@ export function SipPhoneProvider({children}: PropsWithChildren) {
   const [error, setError] = useState<string | null>(null);
   const [incomingCaller, setIncomingCaller] = useState<string | null>(null);
   const [muted, setMuted] = useState(false);
+  const [localStream, setLocalStream] = useState<MediaStream | null>(null);
   const userAgentRef = useRef<UserAgent | null>(null);
   const registererRef = useRef<Registerer | null>(null);
   const sessionRef = useRef<Session | null>(null);
@@ -57,10 +60,13 @@ export function SipPhoneProvider({children}: PropsWithChildren) {
         setStatus('in-call');
         setIncomingCaller(null);
         attachRemoteAudio(session);
+        const handler = session.sessionDescriptionHandler;
+        if (handler instanceof Web.SessionDescriptionHandler) setLocalStream(handler.localMediaStream);
       }
       if (nextState === SessionState.Terminated) {
         if (sessionRef.current === session) sessionRef.current = null;
         setMuted(false);
+        setLocalStream(null);
         setIncomingCaller(null);
         setStatus(registererRef.current?.state === RegistererState.Registered ? 'registered' : 'disabled');
       }
@@ -197,11 +203,12 @@ export function SipPhoneProvider({children}: PropsWithChildren) {
     error,
     incomingCaller,
     muted,
+    localStream,
     call,
     answer,
     hangup,
     toggleMute,
-  }), [status, error, incomingCaller, muted, call, answer, hangup, toggleMute]);
+  }), [status, error, incomingCaller, muted, localStream, call, answer, hangup, toggleMute]);
 
   return (
     <SipPhoneContext.Provider value={value}>

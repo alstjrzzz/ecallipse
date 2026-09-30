@@ -5,6 +5,7 @@ import {useAuth} from '../auth/AuthContext';
 import {loadCallSetup, saveCallSetup} from '../calls/callSetup';
 import {counterpartOf, resolveParty} from '../calls/participants';
 import {useCallRealtime} from '../calls/useCallRealtime';
+import {useCallTranscription} from '../calls/useCallTranscription';
 import {useSipPhone} from '../calls/SipPhoneContext';
 import {Avatar} from '../components/Avatar';
 import {Brand} from '../components/Brand';
@@ -46,6 +47,8 @@ export function CallPage() {
   const voiceLabel = phoneNetwork ? 'dummy' : phone.status;
   const sourcePreset = presets.getPreset(setup.presetId);
   const canSaveToPreset = !!sourcePreset && presets.canEdit(sourcePreset);
+
+  useCallTranscription(callId, user?.id, call?.status === 'ACTIVE' && !phoneNetwork ? phone.localStream : null);
 
   useEffect(() => {
     if (call?.status !== 'ACTIVE') return;

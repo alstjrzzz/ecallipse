@@ -36,6 +36,24 @@ public class TranscriptApplicationService {
         return calls.whileActive(callId, () -> submitWhileActive(callId, input));
     }
 
+    /**
+     * Records a live STT result. The server owns sequence and revision here: a new segment takes the next
+     * sequence in the call, and every update of the same segment bumps its revision.
+     */
+    public TranscriptResult recordSpeech(UUID callId, String speakerId, String segmentId, String text, boolean finalSegment) {
+        return calls.whileActive(callId, () -> {
+            Map<String, TranscriptSegment> callSegments = segmentsByCall.computeIfAbsent(callId, ignored -> new HashMap<>());
+            synchronized (callSegments) {
+                TranscriptSegment existing = callSegments.get(segmentId);
+                long sequence = existing != null
+                        ? existing.sequence()
+                        : callSegments.values().stream().mapToLong(TranscriptSegment::sequence).max().orElse(-1) + 1;
+                int revision = existing == null ? 0 : existing.revision() + 1;
+                return submitWhileActive(callId, new TranscriptInput(segmentId, sequence, revision, speakerId, text, finalSegment));
+            }
+        });
+    }
+
     private TranscriptResult submitWhileActive(UUID callId, TranscriptInput input) {
         Map<String, TranscriptSegment> callSegments = segmentsByCall.computeIfAbsent(callId, ignored -> new HashMap<>());
         synchronized (callSegments) {

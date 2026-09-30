@@ -70,7 +70,7 @@ Ecallipse의 핵심은 "AI가 대신 전화한다"가 아니라 **사용자가 �
 ### 4.2 Configurable AI Assistance
 
 - **REQ-AI-001 [Core]** 사용자는 통화 목적에 맞게 필요한 AI 보조 기능을 선택하거나 제외할 수 있어야 한다.
-- **REQ-AI-002 [Core, POC]** 통화 음성을 실시간 transcript로 변환할 수 있어야 한다.
+- **REQ-AI-002 [Core, POC]** 통화 음성을 실시간 transcript로 변환할 수 있어야 한다. 현재는 각 브라우저가 자기 마이크만 16kHz PCM으로 백엔드에 보내고, 백엔드가 Deepgram으로 스트리밍한다. 화자는 보낸 사용자로 정해진다. `DEEPGRAM_API_KEY`가 없으면 발화 구간만 감지하는 fake STT를 쓴다. 전화망 통화는 음성이 더미라 STT 대상이 아니다.
 - **REQ-AI-003 [Core, POC]** 통화 중 최소 하나의 실시간 AI 보조 기능을 제공해야 한다. POC에서는 `Next Action`을 우선 검증한다.
 - **REQ-AI-004 [Current]** Transcript, Checklist, Next Action, Key Facts, Terminology, Translation, Summary 등 서로 다른 목적의 기능을 조합할 수 있어야 한다.
 - **REQ-AI-005 [Current, POC]** AI 보조 기능은 독립적인 Widget으로 추가·제거하고 한 통화 화면 안에서 위치와 크기를 바꿀 수 있어야 한다. 위젯 배치는 가장자리 근처에서 캔버스 경계나 다른 위젯에 스냅한다. `Call Stage`(참가자·연결 상태를 보여주는 통화 자체를 표현하는 위젯)는 모든 구성에 항상 하나 존재하며 위치·크기 조절은 가능하지만 제거할 수 없다.

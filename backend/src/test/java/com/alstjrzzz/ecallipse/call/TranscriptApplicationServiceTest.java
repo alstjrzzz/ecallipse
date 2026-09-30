@@ -100,6 +100,20 @@ class TranscriptApplicationServiceTest {
                 .isInstanceOf(CallApplicationService.InvalidCallOperationException.class);
     }
 
+    @Test
+    void speechResultsGetServerAssignedSequenceAndRevision() {
+        transcripts.recordSpeech(callId, "alice", "a-0", "안녕", false);
+        transcripts.recordSpeech(callId, "bob", "b-0", "네 안녕하세요", true);
+        TranscriptApplicationService.TranscriptResult result = transcripts.recordSpeech(callId, "alice", "a-0", "안녕하세요", true);
+
+        assertThat(result.segment().sequence()).isZero();
+        assertThat(result.segment().revision()).isEqualTo(1);
+        assertThat(result.nextAction()).isNotNull();
+        assertThat(transcripts.list(callId))
+                .extracting(TranscriptSegment::segmentId, TranscriptSegment::sequence)
+                .containsExactly(org.assertj.core.groups.Tuple.tuple("a-0", 0L), org.assertj.core.groups.Tuple.tuple("b-0", 1L));
+    }
+
     private TranscriptApplicationService.TranscriptInput input(
             String segmentId,
             long sequence,
