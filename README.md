@@ -40,9 +40,10 @@ PowerShell 실행 정책 때문에 npm 대신 `npm.cmd`가 필요할 수 있다.
 
 ## Run locally
 
-먼저 root에서 local infrastructure를 실행한다.
+먼저 root에서 local infrastructure를 실행한다. `.env.example`을 `.env`로 복사하고 `POSTGRES_PASSWORD`를 원하는 값으로 바꾼다.
 
 ```powershell
+Copy-Item .env.example .env
 docker compose up --build -d
 .\infra\freeswitch\scripts\check-status.ps1
 ```
