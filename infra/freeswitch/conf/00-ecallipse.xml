@@ -1,0 +1,7 @@
+<include>
+  <extension name="ecallipse-internal-users">
+    <condition field="destination_number" expression="^(1000|1001)$">
+      <action application="bridge" data="user/$1@$${domain}"/>
+    </condition>
+  </extension>
+</include>
