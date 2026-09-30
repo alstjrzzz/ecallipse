@@ -15,6 +15,9 @@ services:
       context: ./infra/freeswitch
     image: ecallipse-freeswitch:1.10.12
     hostname: ecallipse-freeswitch
+    environment:
+      # Chrome only completes ICE with a non-loopback host IP.
+      MEDIA_IP: ${MEDIA_IP:?set MEDIA_IP in .env to this PC's LAN IPv4}
     ports:
       - "5060:5060/udp"
       - "5060:5060/tcp"
