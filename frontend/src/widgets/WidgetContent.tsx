@@ -44,7 +44,7 @@ function TranscriptWidget({callId, call, currentUserId, transcripts}: WidgetCont
   const [demoText, setDemoText] = useState('내일까지 수정된 제안서를 확인하고 회신하기로 했습니다.');
   const [sending, setSending] = useState(false);
   const endRef = useRef<HTMLDivElement | null>(null);
-  useEffect(() => endRef.current?.scrollIntoView({behavior: 'smooth'}), [transcripts.length]);
+  useEffect(() => { endRef.current?.scrollIntoView({behavior: 'smooth'}); }, [transcripts.length]);
 
   const sendDemo = async () => {
     setSending(true);
@@ -95,7 +95,7 @@ function ChecklistWidget({callId, userId}: {callId: string; userId: string}) {
     const prepared = loadCallSetup(userId, callId)?.checklist ?? [];
     return (prepared.length > 0 ? prepared : DEFAULT_CHECKLIST).map((text) => ({text, done: false}));
   });
-  useEffect(() => localStorage.setItem(key, JSON.stringify(items)), [items, key]);
+  useEffect(() => { localStorage.setItem(key, JSON.stringify(items)); }, [items, key]);
   return <div className="checklist-widget">{items.map((item, index) => <label key={`${item.text}-${index}`}><input type="checkbox" checked={item.done} onChange={() => setItems((current) => current.map((entry, itemIndex) => itemIndex === index ? {...entry, done: !entry.done} : entry))} /><span>{item.text}</span></label>)}</div>;
 }
 
