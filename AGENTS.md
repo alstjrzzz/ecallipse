@@ -7,6 +7,7 @@
 - 필요한 library/provider(STT, LLM 등)는 바로 하나 골라 붙인다. 교체는 나중에 한다.
 - 실제 연동이 막히면 fake/더미로 먼저 흐름을 만들고 넘어간다.
 - 요구사항이 바뀌거나 구현하면서 달라지면 `docs/requirements.md`만 고친다. 별도 설계 문서, decision record, 진행 로그는 만들지 않는다.
+- 작업 시작 전에 `context/todo.md`(git 미추적)를 읽고, 끝낸 항목은 지우고 새 후속 작업은 한 줄로 추가한다.
 
 ## 지킬 것
 
